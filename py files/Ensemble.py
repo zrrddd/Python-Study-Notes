@@ -64,4 +64,37 @@ results = model_selection.cross_val_score(model, X, Y, cv = kfold)
 
 # Initialized a 10-fold CV fold -- DecisionTreeClassifier with 100trees and wrapped it in a Bagging based ensemble. 
 
+# 这个就是直接扔到AdaBoost里啊.. 
 from sklearn.ensemble import AdaBoostClassifier 
+seed = 7
+num_tress = 70
+kfold = model_selection.KFold(n_splits = 10, random_state = seed)
+model = AdaBoostClassifier(n_estimators = num_trees, random_state = seed)
+results = model_selection.cross_val_score(model, X, Y, cv = kfold)
+
+# Voting-based Ensemble technique
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import svc
+from sklearn.ensemble import VotingClassifier
+
+kfold = model_selection.KFold(n_splits = 10, random_state = seed)
+# create the sub models
+estimators = []
+model1 = LogisticRegression()
+estimators.append(('logistic', model1))
+model2 = DecisionTreeClassifier()
+estimators.append(('cart', model2))
+model3 = SVC()
+estimators.append(('svm', model3))
+# create the ensemble model
+ensemble = VotingClassifier(estimators)
+results = model_selection.cross_val_score(ensemble, X, Y, cv=kfold)
+print(results.mean())
+
+############### Pitfalls of Ensemble learning ###############
+# In general, it is not true that ensemble always perform better
+# 就是说你要挑选最合适的ensemble，比如说high variance和bagging, biased和boosting
+
+
+
