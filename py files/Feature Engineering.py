@@ -65,7 +65,7 @@
 # 3. Interval Data
 # 4. Ratio Data
 
-######## Classic Encoders ########
+######## 1. Classic Encoders ########
 # - One Hot
 # - Binary: onvert each integer to binary digits. Each binary digit gets one column. Some info loss but fewer dimensions. Ordinal.
 # - Ordinal 
@@ -73,17 +73,21 @@
 # - Hashing: Like OneHot but fewer dimensions, some info loss due to collisions. 
 # - Sum: Just like OneHot except one value is held constant and encoded as -1 across all columns.
 
-######## Contrast Encoders ########
+######## 2. Contrast Encoders ########
 # - Helmert (reverse)
 # - Backward Difference
 # - Polynomial 
 
-######## Bayesian Encoders ########
+######## 3. Bayesian Encoders ########
 # - Target
 # - LeaveOneOut
 # - WeightOfEvidence
 # - James-Stein
 # - M-estimator
+
+
+
+######## 1. Classic Encoders ########
 
 ######## OneHot Encoder ########
 import pandas as 
@@ -98,11 +102,94 @@ pd.get_dummies(df, drop_first = True, dummy_na = True) # 这样missing也会算�
 # 1. Does not add any information that may make the variable more predictive
 # 2. 如果category很多的话会增加很多column
 
+######## Count and Frequency Encoder ########
+# 就是not replace with 1 but with count/frequency
+# Simple, does not expand the feature space（在原来的column上直接修改）
+# 不好的就是如果两个count一样，那就搞不清谁是谁了，就会lose infomation
+frequency_map = X_train[col].value_counts().to_dict()
+X_train.col = X_train.col.map(frequency_map) #直接map就好了，或者replace？
+
+# 注意如果有的label是test里有的但是train没有，那你就会有missingness
+# 有一种方法是把几个比较频繁出现的encode一下，剩下的category全部归为“Rare"
+
+######## Binary Encoder ########
+# Hybrid of One-hot and hashing encoders
+# Create fewer features than one-hot, while preserving some uniqueness of values in the column
+
+# 1. Encoded by Ordinal Encoder first
+# 2. Covert integers to binary code, for example 5 becomes 101 and 10 becomes 1010
+# 3. 然后有几位就几个column，比如你有7个category，那就是3个column，因为(2**3 = 8!)
+
+import pandas as pd
+import numpy as np
+import category_encoders as ce
+from sklearn.preprocessing import LabelEncoder
+
+binary_encoder = cd.BinaryEncoder(cols = ['col'])
+binary_encoder.fit_transform(X, y)
+
+# Binary Encoder很适合如果你有很多种类，比如50个US state
+# 但如果种类很少的话，就onehot好了
+
+
+######## Ordinal Encoder ######## 
+ordinal_encoder = ce.OrdinalEncoder(cols = ['col'])
+ordinal_encoder.fit_transform(X, y['col'])
+
+
+######## BaseN Encoder ######## 
+# When BaseN = 1, one hot encoding
+# When BaseN = 2, binary encoding
+BaseN_encoder = ce.BaseNEncoder(cols = ['col'])
+BaseN_encoder.fit_transform(X, y)
+
+# default is BaseN = 2
+
+######## Hashing Encoder ######## 
+# Hashing Encoder implements the hashing trick. It is similar to one-hot encoding but with fewer new dimensions and some info loss due to collisions
+Hashing_encoder = ce.HashingEncoder(cols = ['col'])
+Hashing_encoder.fit_transform(X, y)
+
+
+######## Sum Encoder ######## 
+Sum_encoder = ce.SumEncoder(cols = ['col'])
+Sum_encoder.fit_transform(X, y)
+
+
+
+######## 2. Contrast Encoders ########
+
+######## Backward Encoder ######## 
+# the mean of the dependent variable for a level is compared with the mean of the dependent variable for the prior level
+ce_backward = ce.BackwardDifferenceEncoder(cols = ['col'])
+ce_backward.fit_transform(X, y)
+
+
+######## Helmert (reverse) Encoder ######## 
+# - The opposite of Backward Encoder 
+# - instead of comparing each level of categorical variable to the mean of the previous level, it is compared to the mean of the subsequent levels.
+ce_helmert = ce.HelmertEncoder(cols = ['col'])
+ce_helmert.fit_transform(X, y)
+
+######## Polynomial Encoder ######## 
+ce_poly = ce.PolynomialEncoder(cols = ['col'])
+ce_poly.fit_transform(X, y)
+
+
+######## 3. Bayesian Encoders ########
+# - The Bayesian encoders use information from the dependent variable in their encodings
+# - They output one column and can work well with high cardinality data.
+
+
+######## Target/Mean Encoder ######## 
+# - 一个category encode的value based on the mean of target
+ce_target = ce.TargetEncoder(cols = ['col'], smoothing = 10) #这个smoothing是做什么的？
+ce_target.fit_transform(X, y)
 
 
 
 
-
+################################## 3. Gaussian Encoding ##################################
 
 
 
