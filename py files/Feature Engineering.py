@@ -7,6 +7,7 @@
 # 4. Reduced need to perform Hyperparameters Optimization.
 
 ################################## 1. Missing Data Imputation ##################################
+
 # 1. Dropping observations that have missing values
 # 2. Imputing the missing values based on other observations
 
@@ -191,7 +192,138 @@ ce_target.fit_transform(X, y)
 
 ################################## 3. Gaussian Encoding ##################################
 
+# Some ML models like linear and logistic regressino assume normal distribution
+# 但现实中很多variable are not normally distributed,所以我们要transform他们！
 
+# - Logarithmic Transformation
+# - Reciprocal Transformation
+# - Square Root Transformation
+# - Exponential Transformation
+# - Yeo-Johnson Transformation
+# - Boxcox Transformation
+
+# 注意：没有哪个方法更好用，取决于orignal data
+
+import pandas as pd
+import numpy as np
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+
+train_data = pd.read_csv('train.csv', usecols = ['Age', 'Fare', 'Survived'])
+
+# Plot the probability plot
+stats.probplot(train_data['Age'], dist = 'norm', plot = pylab)
+# The probability plot is a graphical technique for assessing whether or not a data set follows a given distribution such as the normal or Weibull. 
+
+######## Logarithmic Transformation ######## 
+train_data['Age_log'] = np.log(train_data['Age'])
+
+######## Reciprocal Transformation ######## 
+train_data['Age_reciprocal'] = 1/train_data['Age']
+
+######## Square root Transformation ######## 
+train_data['Age_sqr'] = train_data['Age'] ** 0.5
+
+######## Exponential Transformation ######## 
+train_data['Age_exp'] = train_data['Age'] * (1/1.2) # 这边应该就是一个数就好了
+
+######## Yeo-Johnson Transformation ######## 
+train_data['Age_yeojohnson'], param = stats.yeojohnson(train_data['Age'])
+# 这什么玩意？？？
+
+######## Box-Cox Transformation ########
+# 公式: T(y) = (y * exp(λ) - 1)/λ
+# λ 取值于 -5 to 5
+train_data['Age_boxcox'], param = stats.boxcox(train_data['Age'])
+print('Optimal λ':, param)
+# 这个有点意思
+
+################################## 4. Discretisation ##################################
+
+# Discretisation refers to sorting the values of the variable into bins or intervals, also called buckets. 
+# - 使用when there are more possible data points than observed data points?
+		# 挺有道理的，如果是没见过的value，那bin了以后还在train的category，如果不bin就是真的train没见过的东西了
+# - 使用when you want to reduce the amount of data
+		# 比如把好几个column合并成一个 （这也是binning?）
+
+
+
+# Other words for discretization:
+# - Sampling
+# - Quantization
+# - Quantizing
+# - Digitization
+# - Quantification
+# - Binning
+
+# Discretisation 分为两种
+# 1. Supervised: 
+	# use target information in order to create the bins or intervals
+	# discretisation using decision trees
+# 2. Unsupervised:
+	# - Equal width binning
+	# - Equal frequency binning
+
+######## Equal Width Discretisation ########
+# Divide values into N bings of the same width
+# 间隔的距离一样
+# Width = (max - min) / N
+
+import pandas as pd
+import numpy as np
+
+# 手动算bin
+Age_range = X_train['Age'].max() - X_train['Age'].min()
+min_value = int(np.floor(X_train.Age.min()))
+max_value = int(np.ceil(X_train.Age.max()))
+
+inter_value = int(np.round(Age_range/10))
+
+intervals = [i for i in range(min_value, max_value + inter_value, inter_value)]
+# intervals就是手动算的bin啦
+
+X_train['Age_disc_labels'] = pd.cut(x = X_train['Age'], bins = intervals, includ_lowest = True)
+# 如果bin的话，可以去掉一点noise
+
+
+######## Equal Frequency Discretisation ########
+# Each bin carries the same amount of observations
+# 很明显这个要用qcut!
+
+Age_discretised, intervals = pd.qcut(train_data['Age'], 4, retbins = True)
+# 4 说明是 4个cutting points，所以就是5个bin
+# retbins，我猜是returnbins？所以我们用Interval记录分出来的bin
+
+# We should roughly have the same abount of observations per bin
+# 不一定一模一样的数量！ 因为我们用的是 quantile
+
+######## Discretisation using devision trees ########
+# Use a decision tree to identify the optimal splitting points 
+# 1. Train a decision tree of limited depth (2, 3, or 4) using the variable we want to discretise to predict the target
+# 2. The original variable values are then replaced by the probability returned by the tree
+# 3. 因为tree其实是bin based，所以在一个bin的return value是一样的
+
+# Advantages:
+# 1. The probabilistic predictions returned decision tree are monotonically related to the target.
+# 2. The new bins show decreased entropy, this is the observations within each bucket / bin are more similar to themselves than to those of other buckets / bins.
+# 3. 自动化
+
+# Disadvantages:
+# 1. It may cause over-fitting
+# 2. More importantly, some tuning of tree parameters need to be done to obtain the optimal splits (e.g., depth, minimum number of samples in one partition, maximum number of partitions, and a minimum information gain).
+
+import pandas as pd
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier, export_graphviz
+from sklearn.model_selection import cross_val_score
+
+
+tree_model = DecisionTreeClassifier(max_depth = 2)
+tree_model.fit(X_train.Age.to_frame(), X_train.Survived)
+X_train['Age_tree'] = tree_model.predict_proba(X_train.Age.to_frame())
+
+
+################################## 5. Outlier Engineering ##################################
 
 
 
